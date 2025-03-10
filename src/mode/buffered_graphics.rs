@@ -246,7 +246,7 @@ use super::DisplayConfigAsync;
 
 #[cfg(feature = "graphics")]
 #[maybe_async_cfg::maybe(
-    sync(keep_self),
+    sync(not(feature = "async"), keep_self),
     async(
         feature = "async",
         idents(
@@ -264,7 +264,7 @@ where
     type Color = BinaryColor;
     type Error = DisplayError;
 
-    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
+    async fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
     where
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
@@ -280,7 +280,7 @@ where
         Ok(())
     }
 
-    fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
+    async fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
         self.clear_impl(color.is_on());
         Ok(())
     }
