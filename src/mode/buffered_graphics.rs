@@ -320,13 +320,13 @@ where
     DI: AsyncWriteOnlyDataCommand,
     SIZE: DisplaySizeAsync,
 {
-    type BufferType = u8;
+    type BufferElement = u8;
 
     fn split_display_buffer(
         &mut self, /* add option to split vertically here later */
     ) -> (
-        DisplayPartition<Self::BufferType, Self>,
-        DisplayPartition<Self::BufferType, Self>,
+        DisplayPartition<Self::BufferElement, Self>,
+        DisplayPartition<Self::BufferElement, Self>,
     ) {
         let left_partition = Rectangle::new(
             Point::new(0, 0),
@@ -357,7 +357,7 @@ where
         ((y as usize) / 8 * SIZE::WIDTH as usize) + (x as usize)
     }
 
-    fn set_pixel(buffer: &mut Self::BufferType, pixel: Pixel<Self::Color>) {
+    fn set_pixel(buffer: &mut Self::BufferElement, pixel: Pixel<Self::Color>) {
         // assumes rotation 0 or 180
         let value = pixel.1.is_on() as u8;
         let bit = pixel.0.y % 8;
