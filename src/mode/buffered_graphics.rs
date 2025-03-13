@@ -11,6 +11,8 @@ use crate::{size::DisplaySizeAsync, Ssd1306Async};
 #[cfg(feature = "async")]
 use display_interface::AsyncWriteOnlyDataCommand;
 use display_interface::{DisplayError, WriteOnlyDataCommand};
+#[cfg(feature = "async")]
+use shared_display::sharable_display::{DisplayPartition, SharableBufferedDisplay};
 
 /// Buffered graphics mode.
 ///
@@ -239,6 +241,8 @@ use embedded_graphics_core::{
     pixelcolor::BinaryColor,
     Pixel,
 };
+#[cfg(feature = "async")]
+use embedded_graphics_core::{prelude::Point, primitives::Rectangle};
 
 use super::DisplayConfig;
 #[cfg(feature = "async")]
@@ -307,5 +311,59 @@ where
         let (w, h) = self.dimensions();
 
         Size::new(w.into(), h.into())
+    }
+}
+
+#[cfg(all(feature = "graphics", feature = "async"))]
+impl<DI, SIZE> SharableBufferedDisplay for Ssd1306Async<DI, SIZE, BufferedGraphicsModeAsync<SIZE>>
+where
+    DI: AsyncWriteOnlyDataCommand,
+    SIZE: DisplaySizeAsync,
+{
+    type BufferType = u8;
+
+    fn split_display_buffer(
+        &mut self, /* add option to split vertically here later */
+    ) -> (
+        DisplayPartition<Self::BufferType, Self>,
+        DisplayPartition<Self::BufferType, Self>,
+    ) {
+        let left_partition = Rectangle::new(
+            Point::new(0, 0),
+            Size::new((SIZE::WIDTH / 2).into(), SIZE::HEIGHT.into()),
+        );
+        let right_partition = Rectangle::new(
+            Point::new((SIZE::WIDTH / 2).into(), 0),
+            Size::new((SIZE::WIDTH / 2).into(), SIZE::HEIGHT.into()),
+        );
+        (
+            DisplayPartition::new(
+                &mut self.mode.buffer.as_mut(),
+                SIZE::WIDTH.into(),
+                left_partition,
+            ),
+            DisplayPartition::new(
+                &mut self.mode.buffer.as_mut(),
+                SIZE::WIDTH.into(),
+                right_partition,
+            ),
+        )
+    }
+
+    fn get_buffer_offset(pixel: Pixel<Self::Color>, _display_width: usize) -> usize {
+        // assumes rotation 0 or 180
+        let x = pixel.0.x;
+        let y = pixel.0.y;
+        ((y as usize) / 8 * SIZE::WIDTH as usize) + (x as usize)
+    }
+
+    fn set_pixel(buffer: &mut Self::BufferType, pixel: Pixel<Self::Color>) {
+        // assumes rotation 0 or 180
+        let value = pixel.1.is_on() as u8;
+        let bit = pixel.0.y % 8;
+
+        // Set pixel value in byte
+        // Ref this comment https://stackoverflow.com/questions/47981/how-do-you-set-clear-and-toggle-a-single-bit#comment46654671_47990
+        *buffer = *buffer & !(1 << bit) | (value << bit);
     }
 }
