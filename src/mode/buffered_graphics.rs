@@ -11,7 +11,7 @@ use crate::{size::DisplaySizeAsync, Ssd1306Async};
 #[cfg(feature = "async")]
 use display_interface::AsyncWriteOnlyDataCommand;
 use display_interface::{DisplayError, WriteOnlyDataCommand};
-#[cfg(feature = "async")]
+#[cfg(all(feature = "async", feature = "graphics"))]
 use shared_display::sharable_display::{DisplayPartition, SharableBufferedDisplay};
 
 /// Buffered graphics mode.
@@ -118,6 +118,16 @@ where
     /// Clear the underlying framebuffer. You need to call `disp.flush()` for any effect on the screen.
     pub fn clear_buffer(&mut self) {
         self.clear_impl(false);
+    }
+
+    /// Write out the entire buffer to a display.
+    pub async fn flush_all(&mut self) -> Result<(), DisplayError> {
+        let (width, height) = self.dimensions();
+        self.mode.min_x = 0;
+        self.mode.max_x = width - 1;
+        self.mode.min_y = 0;
+        self.mode.max_y = height - 1;
+        self.flush().await
     }
 
     /// Write out data to a display.
