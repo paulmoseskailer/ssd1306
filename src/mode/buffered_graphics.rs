@@ -12,7 +12,7 @@ use crate::{size::DisplaySizeAsync, Ssd1306Async};
 use display_interface::AsyncWriteOnlyDataCommand;
 use display_interface::{DisplayError, WriteOnlyDataCommand};
 #[cfg(all(feature = "async", feature = "graphics"))]
-use shared_display::sharable_display::{DisplayPartition, SharableBufferedDisplay};
+use shared_display::sharable_display::SharableBufferedDisplay;
 
 /// Buffered graphics mode.
 ///
@@ -243,6 +243,8 @@ where
     }
 }
 
+#[cfg(feature = "async")]
+use embedded_graphics_core::prelude::Point;
 #[cfg(feature = "graphics")]
 use embedded_graphics_core::{
     draw_target::DrawTarget,
@@ -251,8 +253,6 @@ use embedded_graphics_core::{
     pixelcolor::BinaryColor,
     Pixel,
 };
-#[cfg(feature = "async")]
-use embedded_graphics_core::{prelude::Point, primitives::Rectangle};
 
 use super::DisplayConfig;
 #[cfg(feature = "async")]
@@ -332,38 +332,14 @@ where
 {
     type BufferElement = u8;
 
-    fn split_display_buffer(
-        &mut self, /* add option to split vertically here later */
-    ) -> (
-        DisplayPartition<Self::BufferElement, Self>,
-        DisplayPartition<Self::BufferElement, Self>,
-    ) {
-        let left_partition = Rectangle::new(
-            Point::new(0, 0),
-            Size::new((SIZE::WIDTH / 2).into(), SIZE::HEIGHT.into()),
-        );
-        let right_partition = Rectangle::new(
-            Point::new((SIZE::WIDTH / 2).into(), 0),
-            Size::new((SIZE::WIDTH / 2).into(), SIZE::HEIGHT.into()),
-        );
-        (
-            DisplayPartition::new(
-                &mut self.mode.buffer.as_mut(),
-                SIZE::WIDTH.into(),
-                left_partition,
-            ),
-            DisplayPartition::new(
-                &mut self.mode.buffer.as_mut(),
-                SIZE::WIDTH.into(),
-                right_partition,
-            ),
-        )
+    fn get_buffer(&mut self) -> &mut [Self::BufferElement] {
+        self.mode.buffer.as_mut()
     }
 
-    fn get_buffer_offset(pixel: Pixel<Self::Color>, _display_width: usize) -> usize {
+    fn calculate_buffer_index(p: Point, _display_width: usize) -> usize {
         // assumes rotation 0 or 180
-        let x = pixel.0.x;
-        let y = pixel.0.y;
+        let x = p.x;
+        let y = p.y;
         ((y as usize) / 8 * SIZE::WIDTH as usize) + (x as usize)
     }
 
