@@ -336,7 +336,7 @@ where
         self.mode.buffer.as_mut()
     }
 
-    fn calculate_buffer_index(p: Point, _display_width: usize) -> usize {
+    fn calculate_buffer_index(p: Point, _parent_size: Size) -> usize {
         // assumes rotation 0 or 180
         let x = p.x;
         let y = p.y;
